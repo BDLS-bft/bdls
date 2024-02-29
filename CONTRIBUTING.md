@@ -9,13 +9,10 @@ Email: a.alsalih2@gmail.com,
 Discord: ahmedalsalih#6158
 ```
 
-* You can join the Mentorship Project 2023 :
-https://wiki.hyperledger.org/display/INTERN/Integrate+new+BFT+protocol+%28BDLS+consensus%29+with+Fabric
-
 
 * Bi-weekly lab meeting.
 ```
-Next meeting: Thursday, Mar-30, 2023
+Next meeting: Thursday, Mar-14, 2024
 9:30am to 10:00am Eastern Time
 Repeats:
 Every 2 weeks on Thursday
