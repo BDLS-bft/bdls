@@ -12,7 +12,6 @@ import (
 	//"fmt"
 	"github.com/BDLS-bft/bdls/crypto/blake2b"
 
-
 	proto "github.com/gogo/protobuf/proto"
 )
 
@@ -278,8 +277,12 @@ type Consensus struct {
 	// the StateHash function to identify a state
 	stateHash func(State) StateHash
 
-	// private key
-	privateKey *ecdsa.PrivateKey
+    // private key
+    privateKey *ecdsa.PrivateKey
+    // external signer callback; used when privateKey is nil
+    signDigest func(digest []byte) (rBytes, sBytes []byte, err error)
+    // public key when using external signer
+    publicKey *ecdsa.PublicKey
 	// my publickey coodinate
 	identity Identity
 	// curve retrieved from private key
@@ -334,7 +337,9 @@ func (c *Consensus) init(config *Config) {
 	c.stateValidate = config.StateValidate
 	c.messageValidator = config.MessageValidator
 	c.messageOutCallback = config.MessageOutCallback
-	c.privateKey = config.PrivateKey
+    c.privateKey = config.PrivateKey
+    c.signDigest = config.SignDigest
+    c.publicKey = config.PublicKey
 	c.pubKeyToIdentity = config.PubKeyToIdentity
 	c.enableCommitUnicast = config.EnableCommitUnicast
 
@@ -346,8 +351,14 @@ func (c *Consensus) init(config *Config) {
 	if c.pubKeyToIdentity == nil {
 		c.pubKeyToIdentity = DefaultPubKeyToIdentity
 	}
-	c.identity = c.pubKeyToIdentity(&c.privateKey.PublicKey)
-	c.curve = c.privateKey.Curve
+    if c.privateKey != nil {
+        c.identity = c.pubKeyToIdentity(&c.privateKey.PublicKey)
+        c.curve = c.privateKey.Curve
+    } else {
+        // signer path
+        c.identity = c.pubKeyToIdentity(c.publicKey)
+        c.curve = c.publicKey.Curve
+    }
 
 	// initial default parameters settings
 	c.latency = DefaultConsensusLatency
@@ -1024,7 +1035,11 @@ func (c *Consensus) broadcast(m *Message) *SignedProto {
 	// sign
 	sp := new(SignedProto)
 	sp.Version = ProtocolVersion
-	sp.Sign(m, c.privateKey)
+    if c.privateKey != nil {
+        sp.Sign(m, c.privateKey)
+    } else {
+        sp.SignWithSigner(m, c.signDigest, c.publicKey)
+    }
 
 	// message callback
 	if c.messageOutCallback != nil {
@@ -1051,7 +1066,11 @@ func (c *Consensus) sendTo(m *Message, leader Identity) {
 	// sign
 	sp := new(SignedProto)
 	sp.Version = ProtocolVersion
-	sp.Sign(m, c.privateKey)
+    if c.privateKey != nil {
+        sp.Sign(m, c.privateKey)
+    } else {
+        sp.SignWithSigner(m, c.signDigest, c.publicKey)
+    }
 
 	// message callback
 	if c.messageOutCallback != nil {

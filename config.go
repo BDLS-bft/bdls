@@ -1,4 +1,3 @@
-
 package bdls
 
 import (
@@ -17,8 +16,16 @@ type Config struct {
 	Epoch time.Time
 	// CurrentHeight
 	CurrentHeight uint64
-	// PrivateKey
-	PrivateKey *ecdsa.PrivateKey
+    // PrivateKey
+    PrivateKey *ecdsa.PrivateKey
+
+    // SignDigest is an alternative signing mechanism when PrivateKey is not available.
+    // It receives the BDLS-produced digest and returns the raw ECDSA (r, s) byte slices.
+    // When SignDigest is provided, PublicKey must also be set.
+    SignDigest func(digest []byte) (rBytes, sBytes []byte, err error)
+
+    // PublicKey is required when using SignDigest. It is used to populate X/Y and derive identity.
+    PublicKey *ecdsa.PublicKey
 	// Consensus Group
 	Participants []Identity
 	// EnableCommitUnicast sets to true to enable <commit> message to be delivered via unicast
@@ -60,9 +67,12 @@ func VerifyConfig(c *Config) error {
 		return ErrConfigStateValidate
 	}
 
-	if c.PrivateKey == nil {
-		return ErrConfigPrivateKey
-	}
+    // Either a private key must be provided, or a signer callback with public key.
+    if c.PrivateKey == nil {
+        if c.SignDigest == nil || c.PublicKey == nil {
+            return ErrConfigPrivateKey
+        }
+    }
 
 	if len(c.Participants) < ConfigMinimumParticipants {
 		return ErrConfigParticipants
