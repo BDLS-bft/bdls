@@ -1,6 +1,4 @@
-
 module github.com/BDLS-bft/bdls
-
 
 go 1.17
 

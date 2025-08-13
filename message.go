@@ -9,7 +9,6 @@ import (
 	"errors"
 	"math/big"
 
-
 	"github.com/BDLS-bft/bdls/crypto/blake2b"
 	"github.com/BDLS-bft/bdls/crypto/btcec"
 
@@ -181,6 +180,32 @@ func (sp *SignedProto) Verify(curve elliptic.Curve) bool {
 	S.SetBytes(sp.S[:])
 
 	return ecdsa.Verify(&pubkey, hash, &R, &S)
+}
+
+// SignWithSigner signs the message using an external signer that accepts the BDLS digest
+// and returns raw r/s byte slices. The provided public key is used to set X/Y.
+func (sp *SignedProto) SignWithSigner(m *Message, sign func([]byte) (rBytes, sBytes []byte, err error), pub *ecdsa.PublicKey) {
+    bts, err := proto.Marshal(m)
+    if err != nil {
+        panic(err)
+    }
+    sp.Version = ProtocolVersion
+    sp.Message = bts
+
+    if err = sp.X.Unmarshal(pub.X.Bytes()); err != nil {
+        panic(err)
+    }
+    if err = sp.Y.Unmarshal(pub.Y.Bytes()); err != nil {
+        panic(err)
+    }
+
+    hash := sp.Hash()
+    r, s, err := sign(hash)
+    if err != nil {
+        panic(err)
+    }
+    sp.R = r
+    sp.S = s
 }
 
 // PublicKey returns the public key of this signed message
