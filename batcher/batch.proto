@@ -1,0 +1,8 @@
+syntax = "proto3";
+package batcher;
+
+option go_package = "github.com/BDLS-bft/bdls/batcher";
+
+message Batch {
+    repeated bytes transactions = 1;
+}
